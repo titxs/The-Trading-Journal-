@@ -204,6 +204,7 @@ export default function TradeJournal() {
     winRate: 0,
     rulesRate: 0,
     totalPnl: 0,
+    totalDollar: 0,
     avgRR: 0,
     bestTrade: 0,
     worstTrade: 0,
@@ -213,6 +214,8 @@ export default function TradeJournal() {
     stats.rulesRate = ((stats.rulesFollowed / stats.total) * 100).toFixed(1);
     const pnls = trades.filter((t) => t.pnl).map((t) => parseFloat(t.pnl));
     stats.totalPnl = pnls.reduce((a, b) => a + b, 0).toFixed(2);
+    const dollars = trades.filter((t) => t.pnlDollar).map((t) => parseFloat(t.pnlDollar));
+    stats.totalDollar = dollars.length ? dollars.reduce((a, b) => a + b, 0).toFixed(2) : 0;
     stats.bestTrade = pnls.length ? Math.max(...pnls).toFixed(2) : 0;
     stats.worstTrade = pnls.length ? Math.min(...pnls).toFixed(2) : 0;
     const winRRs = trades
@@ -1133,11 +1136,16 @@ export default function TradeJournal() {
             <StatCard label="Avg R:R (wins)" value={`${stats.avgRR}:1`} color="#00b4d8" small />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12 }}>
             <StatCard
-              label="Total P&L"
+              label="Total P&L %"
               value={`${parseFloat(stats.totalPnl) >= 0 ? "+" : ""}${stats.totalPnl}%`}
               color={parseFloat(stats.totalPnl) >= 0 ? "#00ff88" : "#ff4455"}
+            />
+            <StatCard
+              label="Total P&L $"
+              value={parseFloat(stats.totalDollar) !== 0 ? `${parseFloat(stats.totalDollar) >= 0 ? "+" : "-"}$${Math.abs(parseFloat(stats.totalDollar)).toFixed(2)}` : "—"}
+              color={parseFloat(stats.totalDollar) >= 0 ? "#00ff88" : "#ff4455"}
             />
             <StatCard label="Best Trade" value={`+${stats.bestTrade}%`} color="#00ff88" />
             <StatCard label="Worst Trade" value={`${stats.worstTrade}%`} color="#ff4455" />
@@ -1302,22 +1310,25 @@ function PnlCalendar({ trades, calendarMonth, setCalendarMonth }) {
   let monthTrades = 0;
   let bestDay = -Infinity;
   let worstDay = Infinity;
+  let bestDayDollar = -Infinity;
+  let worstDayDollar = Infinity;
 
   Object.keys(pnlByDate).forEach((date) => {
     if (date.startsWith(monthStr)) {
       const dayPnl = pnlByDate[date];
+      const dayDol = dollarByDate[date] || 0;
       monthlyPnl += dayPnl;
-      monthlyDollar += dollarByDate[date] || 0;
+      monthlyDollar += dayDol;
       monthTrades += tradesByDate[date];
       if (dayPnl > 0) monthWins++;
       if (dayPnl < 0) monthLosses++;
-      if (dayPnl > bestDay) bestDay = dayPnl;
-      if (dayPnl < worstDay) worstDay = dayPnl;
+      if (dayPnl > bestDay) { bestDay = dayPnl; bestDayDollar = dayDol; }
+      if (dayPnl < worstDay) { worstDay = dayPnl; worstDayDollar = dayDol; }
     }
   });
 
-  if (bestDay === -Infinity) bestDay = 0;
-  if (worstDay === Infinity) worstDay = 0;
+  if (bestDay === -Infinity) { bestDay = 0; bestDayDollar = 0; }
+  if (worstDay === Infinity) { worstDay = 0; worstDayDollar = 0; }
 
   const prevMonth = () => {
     setCalendarMonth(new Date(year, month - 1, 1));
@@ -1401,7 +1412,7 @@ function PnlCalendar({ trades, calendarMonth, setCalendarMonth }) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr",
+          gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 1fr",
           gap: 8,
           marginBottom: 16,
         }}
@@ -1413,12 +1424,19 @@ function PnlCalendar({ trades, calendarMonth, setCalendarMonth }) {
           {
             label: "Best Day",
             value: bestDay !== 0 ? `+${bestDay.toFixed(2)}%` : "—",
+            sub: bestDayDollar !== 0 ? `+$${Math.abs(bestDayDollar).toFixed(2)}` : null,
             color: "#00ff88",
           },
           {
             label: "Worst Day",
             value: worstDay !== 0 ? `${worstDay.toFixed(2)}%` : "—",
+            sub: worstDayDollar !== 0 ? `-$${Math.abs(worstDayDollar).toFixed(2)}` : null,
             color: "#ff4455",
+          },
+          {
+            label: "Monthly $",
+            value: monthlyDollar !== 0 ? `${monthlyDollar >= 0 ? "+" : "-"}$${Math.abs(monthlyDollar).toFixed(2)}` : "—",
+            color: monthlyDollar >= 0 ? "#00ff88" : "#ff4455",
           },
         ].map((s) => (
           <div
@@ -1441,6 +1459,20 @@ function PnlCalendar({ trades, calendarMonth, setCalendarMonth }) {
             >
               {s.value}
             </div>
+            {s.sub && (
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: s.color,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  opacity: 0.6,
+                  marginTop: 1,
+                }}
+              >
+                {s.sub}
+              </div>
+            )}
             <div
               style={{
                 fontSize: 9,
