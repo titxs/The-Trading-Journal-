@@ -104,6 +104,7 @@ export default function TradeJournal() {
   const [editingId, setEditingId] = useState(null);
   const [expandedTrade, setExpandedTrade] = useState(null);
   const [filterResult, setFilterResult] = useState("ALL");
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -317,7 +318,7 @@ export default function TradeJournal() {
         </div>
 
         <div style={{ display: "flex", gap: 4, background: "#161b22", borderRadius: 8, padding: 3 }}>
-          {["log", "history", "stats"].map((v) => (
+          {["log", "history", "dashboard", "stats"].map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
@@ -336,7 +337,7 @@ export default function TradeJournal() {
                 transition: "all 0.2s",
               }}
             >
-              {v === "log" ? (editingId ? "✏️ Edit" : "＋ Log") : v === "history" ? "📋 History" : "📊 Stats"}
+              {v === "log" ? (editingId ? "✏️ Edit" : "＋ Log") : v === "history" ? "📋 History" : v === "dashboard" ? "📅 P&L" : "📊 Stats"}
             </button>
           ))}
         </div>
@@ -1085,6 +1086,16 @@ export default function TradeJournal() {
         </div>
       )}
 
+      {/* DASHBOARD / PnL CALENDAR VIEW */}
+      {view === "dashboard" && (
+        <PnlCalendar
+          trades={trades}
+          calendarMonth={calendarMonth}
+          setCalendarMonth={setCalendarMonth}
+          labelStyle={labelStyle}
+        />
+      )}
+
       {/* STATS VIEW */}
       {view === "stats" && (
         <div style={{ maxWidth: 800, margin: "0 auto" }}>
@@ -1235,5 +1246,575 @@ function MiniStat({ label, value, color = "#e6edf3" }) {
         {value || "—"}
       </div>
     </div>
+  );
+}
+
+function PnlCalendar({ trades, calendarMonth, setCalendarMonth }) {
+  const year = calendarMonth.getFullYear();
+  const month = calendarMonth.getMonth();
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0=Sun
+
+  const monthNames = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+
+  // Group trades by date
+  const pnlByDate = {};
+  const tradesByDate = {};
+  trades.forEach((t) => {
+    if (!t.date) return;
+    const pnl = parseFloat(t.pnl) || 0;
+    if (!pnlByDate[t.date]) {
+      pnlByDate[t.date] = 0;
+      tradesByDate[t.date] = 0;
+    }
+    pnlByDate[t.date] += pnl;
+    tradesByDate[t.date] += 1;
+  });
+
+  // Filter to current month
+  const monthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
+  let monthlyPnl = 0;
+  let monthWins = 0;
+  let monthLosses = 0;
+  let monthTrades = 0;
+  let bestDay = -Infinity;
+  let worstDay = Infinity;
+
+  Object.keys(pnlByDate).forEach((date) => {
+    if (date.startsWith(monthStr)) {
+      const dayPnl = pnlByDate[date];
+      monthlyPnl += dayPnl;
+      monthTrades += tradesByDate[date];
+      if (dayPnl > 0) monthWins++;
+      if (dayPnl < 0) monthLosses++;
+      if (dayPnl > bestDay) bestDay = dayPnl;
+      if (dayPnl < worstDay) worstDay = dayPnl;
+    }
+  });
+
+  if (bestDay === -Infinity) bestDay = 0;
+  if (worstDay === Infinity) worstDay = 0;
+
+  const prevMonth = () => {
+    setCalendarMonth(new Date(year, month - 1, 1));
+  };
+  const nextMonth = () => {
+    setCalendarMonth(new Date(year, month + 1, 1));
+  };
+
+  const days = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+  // Build calendar grid
+  const cells = [];
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    cells.push(null);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    cells.push(d);
+  }
+
+  const today = new Date();
+  const isToday = (d) =>
+    d && today.getFullYear() === year && today.getMonth() === month && today.getDate() === d;
+
+  const cellStyle = {
+    minHeight: 80,
+    borderRadius: 6,
+    padding: "6px 8px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    gap: 4,
+    transition: "background 0.2s",
+    position: "relative",
+  };
+
+  return (
+    <div style={{ maxWidth: 900, margin: "0 auto" }}>
+      {/* Monthly P/L header */}
+      <div style={{ textAlign: "center", marginBottom: 16 }}>
+        <span
+          style={{
+            fontSize: 13,
+            color: "#7d8590",
+            fontFamily: "'JetBrains Mono', monospace",
+            fontWeight: 600,
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+          }}
+        >
+          Monthly P/L:{" "}
+        </span>
+        <span
+          style={{
+            fontSize: 20,
+            fontWeight: 700,
+            fontFamily: "'JetBrains Mono', monospace",
+            color: monthlyPnl >= 0 ? "#00ff88" : "#ff4455",
+          }}
+        >
+          {monthlyPnl >= 0 ? "+" : ""}
+          {monthlyPnl.toFixed(2)}%
+        </span>
+      </div>
+
+      {/* Summary row */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr",
+          gap: 8,
+          marginBottom: 16,
+        }}
+      >
+        {[
+          { label: "Trades", value: monthTrades, color: "#e6edf3" },
+          { label: "Green Days", value: monthWins, color: "#00ff88" },
+          { label: "Red Days", value: monthLosses, color: "#ff4455" },
+          {
+            label: "Best Day",
+            value: bestDay !== 0 ? `+${bestDay.toFixed(2)}%` : "—",
+            color: "#00ff88",
+          },
+          {
+            label: "Worst Day",
+            value: worstDay !== 0 ? `${worstDay.toFixed(2)}%` : "—",
+            color: "#ff4455",
+          },
+        ].map((s) => (
+          <div
+            key={s.label}
+            style={{
+              background: "#161b22",
+              border: "1px solid #21262d",
+              borderRadius: 8,
+              padding: "10px 12px",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 700,
+                color: s.color,
+                fontFamily: "'JetBrains Mono', monospace",
+              }}
+            >
+              {s.value}
+            </div>
+            <div
+              style={{
+                fontSize: 9,
+                color: "#7d8590",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                marginTop: 2,
+                fontFamily: "'JetBrains Mono', monospace",
+              }}
+            >
+              {s.label}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Month navigation */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 12,
+        }}
+      >
+        <button
+          onClick={prevMonth}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: "50%",
+            background: "#161b22",
+            border: "1px solid #21262d",
+            color: "#7d8590",
+            cursor: "pointer",
+            fontSize: 14,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontFamily: "'JetBrains Mono', monospace",
+          }}
+        >
+          ‹
+        </button>
+        <span
+          style={{
+            fontSize: 15,
+            fontWeight: 700,
+            color: "#e6edf3",
+            fontFamily: "'JetBrains Mono', monospace",
+          }}
+        >
+          {monthNames[month]} {year}
+        </span>
+        <button
+          onClick={nextMonth}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: "50%",
+            background: "#161b22",
+            border: "1px solid #21262d",
+            color: "#7d8590",
+            cursor: "pointer",
+            fontSize: 14,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontFamily: "'JetBrains Mono', monospace",
+          }}
+        >
+          ›
+        </button>
+      </div>
+
+      {/* Day headers */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(7, 1fr)",
+          gap: 4,
+          marginBottom: 4,
+        }}
+      >
+        {days.map((d) => (
+          <div
+            key={d}
+            style={{
+              textAlign: "center",
+              fontSize: 11,
+              fontWeight: 600,
+              color: "#7d8590",
+              padding: "6px 0",
+              fontFamily: "'JetBrains Mono', monospace",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+            }}
+          >
+            {d}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(7, 1fr)",
+          gap: 4,
+        }}
+      >
+        {cells.map((day, idx) => {
+          if (day === null) {
+            return <div key={`empty-${idx}`} style={{ ...cellStyle, background: "transparent" }} />;
+          }
+
+          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const dayPnl = pnlByDate[dateStr];
+          const dayTrades = tradesByDate[dateStr];
+          const hasData = dayPnl !== undefined;
+          const isPositive = hasData && dayPnl > 0;
+          const isNegative = hasData && dayPnl < 0;
+          const isBreakeven = hasData && dayPnl === 0;
+
+          let bg = "#0d1117";
+          let border = "1px solid #21262d";
+          if (isPositive) {
+            bg = "#00ff8818";
+            border = "1px solid #00ff8833";
+          } else if (isNegative) {
+            bg = "#ff445518";
+            border = "1px solid #ff445533";
+          } else if (isBreakeven) {
+            bg = "#f0c00012";
+            border = "1px solid #f0c00028";
+          }
+
+          return (
+            <div
+              key={dateStr}
+              style={{
+                ...cellStyle,
+                background: bg,
+                border,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  color: isToday(day) ? "#00b4d8" : "#7d8590",
+                  fontWeight: isToday(day) ? 700 : 500,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  alignSelf: "flex-start",
+                }}
+              >
+                {isToday(day) ? (
+                  <span
+                    style={{
+                      background: "#00b4d8",
+                      color: "#0a0c10",
+                      borderRadius: "50%",
+                      width: 20,
+                      height: 20,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 10,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {day}
+                  </span>
+                ) : (
+                  day
+                )}
+              </div>
+              {hasData && (
+                <>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: isPositive ? "#00ff88" : isNegative ? "#ff4455" : "#f0c000",
+                      fontFamily: "'JetBrains Mono', monospace",
+                      marginTop: 4,
+                    }}
+                  >
+                    {isPositive ? "+" : ""}
+                    {dayPnl.toFixed(2)}%
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: "#7d8590",
+                      fontFamily: "'JetBrains Mono', monospace",
+                    }}
+                  >
+                    {dayTrades} trade{dayTrades !== 1 ? "s" : ""}
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Equity curve */}
+      <div
+        style={{
+          marginTop: 24,
+          background: "#161b22",
+          border: "1px solid #21262d",
+          borderRadius: 10,
+          padding: 20,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: "#7d8590",
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            marginBottom: 16,
+            fontFamily: "'JetBrains Mono', monospace",
+          }}
+        >
+          Equity Curve (Cumulative P/L %)
+        </div>
+        <EquityCurve trades={trades} />
+      </div>
+    </div>
+  );
+}
+
+function EquityCurve({ trades }) {
+  // Sort trades by date, then compute cumulative PnL
+  const sorted = [...trades]
+    .filter((t) => t.date && t.pnl)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (sorted.length === 0) {
+    return (
+      <div
+        style={{
+          textAlign: "center",
+          padding: 40,
+          color: "#7d8590",
+          fontSize: 13,
+          fontFamily: "'JetBrains Mono', monospace",
+        }}
+      >
+        Log trades with P/L to see your equity curve.
+      </div>
+    );
+  }
+
+  // Group by date and sum PnL per day
+  const dailyPnl = [];
+  const seen = {};
+  sorted.forEach((t) => {
+    if (!seen[t.date]) {
+      seen[t.date] = { date: t.date, pnl: 0 };
+      dailyPnl.push(seen[t.date]);
+    }
+    seen[t.date].pnl += parseFloat(t.pnl) || 0;
+  });
+
+  // Build cumulative
+  let cumulative = 0;
+  const points = dailyPnl.map((d) => {
+    cumulative += d.pnl;
+    return { date: d.date, cumPnl: cumulative };
+  });
+
+  // SVG dimensions
+  const width = 820;
+  const height = 200;
+  const padL = 50;
+  const padR = 16;
+  const padT = 16;
+  const padB = 30;
+
+  const plotW = width - padL - padR;
+  const plotH = height - padT - padB;
+
+  const maxPnl = Math.max(...points.map((p) => p.cumPnl), 0);
+  const minPnl = Math.min(...points.map((p) => p.cumPnl), 0);
+  const range = maxPnl - minPnl || 1;
+
+  const xScale = (i) => padL + (i / Math.max(points.length - 1, 1)) * plotW;
+  const yScale = (v) => padT + plotH - ((v - minPnl) / range) * plotH;
+
+  const linePath = points
+    .map((p, i) => `${i === 0 ? "M" : "L"}${xScale(i).toFixed(1)},${yScale(p.cumPnl).toFixed(1)}`)
+    .join(" ");
+
+  // Area fill
+  const areaPath = `${linePath} L${xScale(points.length - 1).toFixed(1)},${yScale(0).toFixed(1)} L${xScale(0).toFixed(1)},${yScale(0).toFixed(1)} Z`;
+
+  const lastPoint = points[points.length - 1];
+  const lineColor = lastPoint.cumPnl >= 0 ? "#00ff88" : "#ff4455";
+
+  // Zero line
+  const zeroY = yScale(0);
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      style={{ width: "100%", height: "auto" }}
+    >
+      {/* Zero line */}
+      <line
+        x1={padL}
+        y1={zeroY}
+        x2={width - padR}
+        y2={zeroY}
+        stroke="#21262d"
+        strokeWidth={1}
+        strokeDasharray="4,4"
+      />
+      <text
+        x={padL - 6}
+        y={zeroY + 4}
+        textAnchor="end"
+        fill="#7d8590"
+        fontSize={10}
+        fontFamily="'JetBrains Mono', monospace"
+      >
+        0%
+      </text>
+
+      {/* Max label */}
+      {maxPnl !== 0 && (
+        <text
+          x={padL - 6}
+          y={padT + 4}
+          textAnchor="end"
+          fill="#00ff88"
+          fontSize={10}
+          fontFamily="'JetBrains Mono', monospace"
+        >
+          +{maxPnl.toFixed(1)}%
+        </text>
+      )}
+
+      {/* Min label */}
+      {minPnl !== 0 && (
+        <text
+          x={padL - 6}
+          y={padT + plotH + 4}
+          textAnchor="end"
+          fill="#ff4455"
+          fontSize={10}
+          fontFamily="'JetBrains Mono', monospace"
+        >
+          {minPnl.toFixed(1)}%
+        </text>
+      )}
+
+      {/* Area fill */}
+      <path d={areaPath} fill={lineColor} opacity={0.08} />
+
+      {/* Line */}
+      <path d={linePath} fill="none" stroke={lineColor} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+
+      {/* End dot */}
+      <circle
+        cx={xScale(points.length - 1)}
+        cy={yScale(lastPoint.cumPnl)}
+        r={4}
+        fill={lineColor}
+      />
+
+      {/* End label */}
+      <text
+        x={xScale(points.length - 1)}
+        y={yScale(lastPoint.cumPnl) - 10}
+        textAnchor="middle"
+        fill={lineColor}
+        fontSize={11}
+        fontWeight={700}
+        fontFamily="'JetBrains Mono', monospace"
+      >
+        {lastPoint.cumPnl >= 0 ? "+" : ""}{lastPoint.cumPnl.toFixed(2)}%
+      </text>
+
+      {/* Date labels (first and last) */}
+      <text
+        x={padL}
+        y={height - 4}
+        textAnchor="start"
+        fill="#7d8590"
+        fontSize={9}
+        fontFamily="'JetBrains Mono', monospace"
+      >
+        {points[0].date}
+      </text>
+      <text
+        x={width - padR}
+        y={height - 4}
+        textAnchor="end"
+        fill="#7d8590"
+        fontSize={9}
+        fontFamily="'JetBrains Mono', monospace"
+      >
+        {lastPoint.date}
+      </text>
+    </svg>
   );
 }
