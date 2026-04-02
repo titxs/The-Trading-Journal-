@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { db } from "./firebase";
+import { db, storage } from "./firebase";
 import {
   collection,
   doc,
@@ -9,6 +9,12 @@ import {
   query,
   orderBy,
 } from "firebase/firestore";
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
 
 const COLLECTION = "trades";
 
@@ -109,6 +115,8 @@ export default function TradeJournal() {
   const [expandedTrade, setExpandedTrade] = useState(null);
   const [filterResult, setFilterResult] = useState("ALL");
   const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [saving, setSaving] = useState(false);
+  const [screenshotFiles, setScreenshotFiles] = useState([]);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -141,18 +149,48 @@ export default function TradeJournal() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!currentTrade.date || !currentTrade.direction || !currentTrade.keyLevel) return;
-    const trade = {
-      ...currentTrade,
-      id: editingId || Date.now().toString(),
-      rr: calculateRR(currentTrade),
-      createdAt: editingId ? (trades.find(t => t.id === editingId)?.createdAt || Date.now()) : Date.now(),
-    };
-    saveTrade(trade);
-    setEditingId(null);
-    setCurrentTrade({ ...defaultTrade });
-    setView("history");
+    if (saving) return;
+    setSaving(true);
+
+    try {
+      const tradeId = editingId || Date.now().toString();
+
+      // Upload new screenshot files to Firebase Storage
+      const uploadedUrls = [];
+      for (let i = 0; i < screenshotFiles.length; i++) {
+        const file = screenshotFiles[i];
+        const storageRef = ref(storage, `screenshots/${tradeId}/${Date.now()}_${i}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        const url = await getDownloadURL(storageRef);
+        uploadedUrls.push(url);
+      }
+
+      // Keep existing URLs (from editing) and add new uploads
+      const existingUrls = currentTrade.screenshots.filter(
+        (s) => typeof s === "string" && s.startsWith("http")
+      );
+      const allScreenshots = [...existingUrls, ...uploadedUrls];
+
+      const trade = {
+        ...currentTrade,
+        id: tradeId,
+        screenshots: allScreenshots,
+        rr: calculateRR(currentTrade),
+        createdAt: editingId ? (trades.find(t => t.id === editingId)?.createdAt || Date.now()) : Date.now(),
+      };
+      await saveTrade(trade);
+      setEditingId(null);
+      setCurrentTrade({ ...defaultTrade });
+      setScreenshotFiles([]);
+      setView("history");
+    } catch (e) {
+      console.error("Submit failed:", e);
+      alert("Failed to save trade. Check console for details.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const deleteTrade = (id) => {
@@ -163,6 +201,7 @@ export default function TradeJournal() {
   const editTrade = (trade) => {
     setCurrentTrade({ ...trade });
     setEditingId(trade.id);
+    setScreenshotFiles([]);
     setView("log");
   };
 
@@ -186,6 +225,7 @@ export default function TradeJournal() {
           ...prev,
           screenshots: [...prev.screenshots, ev.target.result],
         }));
+        setScreenshotFiles((prev) => [...prev, file]);
       };
       reader.readAsDataURL(file);
     });
@@ -196,6 +236,7 @@ export default function TradeJournal() {
       ...prev,
       screenshots: prev.screenshots.filter((_, i) => i !== idx),
     }));
+    setScreenshotFiles((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const stats = {
@@ -787,17 +828,21 @@ export default function TradeJournal() {
           {/* Submit */}
           <button
             onClick={handleSubmit}
-            disabled={!currentTrade.date || !currentTrade.direction || !currentTrade.keyLevel}
+            disabled={!currentTrade.date || !currentTrade.direction || !currentTrade.keyLevel || saving}
             style={{
               width: "100%",
               padding: 14,
               marginTop: 16,
               background:
-                currentTrade.date && currentTrade.direction && currentTrade.keyLevel
+                saving
+                  ? "#161b22"
+                  : currentTrade.date && currentTrade.direction && currentTrade.keyLevel
                   ? "linear-gradient(135deg, #00ff88 0%, #00b4d8 100%)"
                   : "#161b22",
               color:
-                currentTrade.date && currentTrade.direction && currentTrade.keyLevel
+                saving
+                  ? "#7d8590"
+                  : currentTrade.date && currentTrade.direction && currentTrade.keyLevel
                   ? "#0a0c10"
                   : "#7d8590",
               border: "none",
@@ -805,22 +850,23 @@ export default function TradeJournal() {
               fontSize: 14,
               fontWeight: 700,
               cursor:
-                currentTrade.date && currentTrade.direction && currentTrade.keyLevel
-                  ? "pointer"
-                  : "not-allowed",
+                saving || !(currentTrade.date && currentTrade.direction && currentTrade.keyLevel)
+                  ? "not-allowed"
+                  : "pointer",
               fontFamily: "'JetBrains Mono', monospace",
               textTransform: "uppercase",
               letterSpacing: "0.05em",
               transition: "all 0.3s",
             }}
           >
-            {editingId ? "UPDATE TRADE" : "LOG TRADE"}
+            {saving ? "SAVING..." : editingId ? "UPDATE TRADE" : "LOG TRADE"}
           </button>
           {editingId && (
             <button
               onClick={() => {
                 setEditingId(null);
                 setCurrentTrade({ ...defaultTrade });
+                setScreenshotFiles([]);
               }}
               style={{
                 width: "100%",
