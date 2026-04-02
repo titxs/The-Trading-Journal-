@@ -96,6 +96,9 @@ const levelTypes = [
   "High OI Strike",
   "RVWAP",
   "Anchored VWAP",
+  "FRVP POC",
+  "FRVP VAH",
+  "FRVP VAL",
 ];
 
 export default function TradeJournal() {
