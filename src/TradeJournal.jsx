@@ -32,6 +32,7 @@ const defaultTrade = {
   posSize: "1%",
   result: "",
   pnl: "",
+  pnlDollar: "",
   followedRules: "",
   confirmed: "",
   different: "",
@@ -582,7 +583,7 @@ export default function TradeJournal() {
 
           {/* Result */}
           <Section title="RESULT">
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12 }}>
               <Field label="Outcome">
                 <div style={{ display: "flex", gap: 6 }}>
                   {["WIN", "LOSS", "BE"].map((r) => (
@@ -629,6 +630,14 @@ export default function TradeJournal() {
                   value={currentTrade.pnl}
                   onChange={(e) => setCurrentTrade({ ...currentTrade, pnl: e.target.value })}
                   placeholder="e.g. +3.34"
+                  style={inputStyle}
+                />
+              </Field>
+              <Field label="P&L $">
+                <input
+                  value={currentTrade.pnlDollar}
+                  onChange={(e) => setCurrentTrade({ ...currentTrade, pnlDollar: e.target.value })}
+                  placeholder="e.g. +150"
                   style={inputStyle}
                 />
               </Field>
@@ -942,6 +951,11 @@ export default function TradeJournal() {
                     >
                       {parseFloat(trade.pnl) >= 0 ? "+" : ""}
                       {trade.pnl}%
+                      {trade.pnlDollar && (
+                        <span style={{ opacity: 0.7, marginLeft: 4 }}>
+                          (${trade.pnlDollar})
+                        </span>
+                      )}
                     </span>
                   )}
                   <span style={{ color: "#7d8590", fontSize: 10 }}>
@@ -1263,21 +1277,26 @@ function PnlCalendar({ trades, calendarMonth, setCalendarMonth }) {
 
   // Group trades by date
   const pnlByDate = {};
+  const dollarByDate = {};
   const tradesByDate = {};
   trades.forEach((t) => {
     if (!t.date) return;
     const pnl = parseFloat(t.pnl) || 0;
+    const dollar = parseFloat(t.pnlDollar) || 0;
     if (!pnlByDate[t.date]) {
       pnlByDate[t.date] = 0;
+      dollarByDate[t.date] = 0;
       tradesByDate[t.date] = 0;
     }
     pnlByDate[t.date] += pnl;
+    dollarByDate[t.date] += dollar;
     tradesByDate[t.date] += 1;
   });
 
   // Filter to current month
   const monthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
   let monthlyPnl = 0;
+  let monthlyDollar = 0;
   let monthWins = 0;
   let monthLosses = 0;
   let monthTrades = 0;
@@ -1288,6 +1307,7 @@ function PnlCalendar({ trades, calendarMonth, setCalendarMonth }) {
     if (date.startsWith(monthStr)) {
       const dayPnl = pnlByDate[date];
       monthlyPnl += dayPnl;
+      monthlyDollar += dollarByDate[date] || 0;
       monthTrades += tradesByDate[date];
       if (dayPnl > 0) monthWins++;
       if (dayPnl < 0) monthLosses++;
@@ -1361,6 +1381,20 @@ function PnlCalendar({ trades, calendarMonth, setCalendarMonth }) {
           {monthlyPnl >= 0 ? "+" : ""}
           {monthlyPnl.toFixed(2)}%
         </span>
+        {monthlyDollar !== 0 && (
+          <span
+            style={{
+              fontSize: 16,
+              fontWeight: 600,
+              fontFamily: "'JetBrains Mono', monospace",
+              color: monthlyDollar >= 0 ? "#00ff88" : "#ff4455",
+              opacity: 0.7,
+              marginLeft: 8,
+            }}
+          >
+            ({monthlyDollar >= 0 ? "+" : ""}${Math.abs(monthlyDollar).toFixed(2)})
+          </span>
+        )}
       </div>
 
       {/* Summary row */}
@@ -1525,6 +1559,7 @@ function PnlCalendar({ trades, calendarMonth, setCalendarMonth }) {
 
           const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
           const dayPnl = pnlByDate[dateStr];
+          const dayDollar = dollarByDate[dateStr];
           const dayTrades = tradesByDate[dateStr];
           const hasData = dayPnl !== undefined;
           const isPositive = hasData && dayPnl > 0;
@@ -1597,6 +1632,19 @@ function PnlCalendar({ trades, calendarMonth, setCalendarMonth }) {
                     {isPositive ? "+" : ""}
                     {dayPnl.toFixed(2)}%
                   </div>
+                  {dayDollar !== undefined && dayDollar !== 0 && (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: isPositive ? "#00ff88" : isNegative ? "#ff4455" : "#f0c000",
+                        fontFamily: "'JetBrains Mono', monospace",
+                        opacity: 0.7,
+                      }}
+                    >
+                      {dayDollar >= 0 ? "+" : "-"}${Math.abs(dayDollar).toFixed(2)}
+                    </div>
+                  )}
                   <div
                     style={{
                       fontSize: 10,
