@@ -287,3 +287,5 @@ const [showQuickEntry, setShowQuickEntry] = useState(false);
     />
   </div>
 )}
+
+view === "quick"
