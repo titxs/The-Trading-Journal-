@@ -269,3 +269,21 @@ function EQ({trades}){
   const last=pts[pts.length-1],lc=last.c>=0?"#00E676":"#FF3D3D";
   return(<svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto"}}><line x1={pL} y1={yS(0)} x2={W-pR} y2={yS(0)} stroke="#252535" strokeWidth={1} strokeDasharray="4,4"/><text x={pL-6} y={yS(0)+4} textAnchor="end" fill="#6B6B80" fontSize={9} fontFamily="JetBrains Mono">0%</text><path d={ap} fill={lc} opacity={0.06}/><path d={lp} fill="none" stroke={lc} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round"/><circle cx={xS(pts.length-1)} cy={yS(last.c)} r={4} fill={lc}/><text x={xS(pts.length-1)} y={yS(last.c)-8} textAnchor="middle" fill={lc} fontSize={10} fontWeight={700} fontFamily="JetBrains Mono">{last.c>=0?"+":""}{last.c.toFixed(2)}%</text><text x={pL} y={H-4} textAnchor="start" fill="#6B6B80" fontSize={8} fontFamily="JetBrains Mono">{pts[0].date}</text><text x={W-pR} y={H-4} textAnchor="end" fill="#6B6B80" fontSize={8} fontFamily="JetBrains Mono">{last.date}</text></svg>);
 }
+// 1. import at top of TradeJournal-6.jsx
+import QuickEntry from "./QuickEntry";
+
+// 2. add state
+const [showQuickEntry, setShowQuickEntry] = useState(false);
+
+// 3. add to your nav buttons array (line ~99)
+{ id: "quick", l: "⚡ Quick" }
+
+// 4. add the view render (after your existing view blocks)
+{view === "quick" && (
+  <div className="fi" style={{ display: "flex", justifyContent: "center" }}>
+    <QuickEntry
+      onSaved={() => setView("dashboard")}
+      onCancel={() => setView("dashboard")}
+    />
+  </div>
+)}
