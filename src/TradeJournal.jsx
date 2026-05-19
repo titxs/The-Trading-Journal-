@@ -94,6 +94,20 @@ function dowBreakdown(trades){
   return out;
 }
 
+// Find best performer in an option list by total P&L (min 2 trades to qualify)
+function bestPerformer(trades, options, key){
+  const stats = options.map(o=>{
+    const ts = trades.filter(t=>t.result&&t[key]===o.id);
+    const pnls = ts.filter(t=>t.pnl).map(t=>parseFloat(t.pnl));
+    const total = pnls.reduce((a,b)=>a+b,0);
+    const wins = ts.filter(t=>t.result==="WIN").length;
+    const wr = ts.length ? (wins/ts.length)*100 : 0;
+    return { ...o, count:ts.length, pnl:total, winRate:wr };
+  }).filter(s=>s.count>=2);
+  if(!stats.length) return null;
+  return stats.sort((a,b)=>b.pnl-a.pnl)[0];
+}
+
 // ── sub-components ────────────────────────────────────────────────────────────
 function Sec({title,children,accent=g}){return(<div style={cS}><div style={{fontSize:10,fontWeight:700,color:accent,textTransform:"uppercase",letterSpacing:"0.12em",fontFamily:F,marginBottom:16,display:"flex",alignItems:"center",gap:8}}><div style={{width:2,height:12,background:accent,borderRadius:2}}/>{title}</div>{children}</div>);}
 function Fld({label,children}){return(<div style={{marginBottom:12}}><div style={{fontSize:9,color:gr,textTransform:"uppercase",letterSpacing:"0.1em",fontFamily:F,marginBottom:6,fontWeight:600}}>{label}</div>{children}</div>);}
@@ -188,6 +202,8 @@ export default function TradeJournal(){
   const maxDD = useMemo(()=>maxDrawdown(trades), [trades]);
   const roll10 = useMemo(()=>rollingWinRate(trades, 10), [trades]);
   const dow = useMemo(()=>dowBreakdown(trades), [trades]);
+  const topSetup = useMemo(()=>bestPerformer(trades, setupOptions, "setup"), [trades]);
+  const topRegime = useMemo(()=>bestPerformer(trades, regimeOptions, "regime"), [trades]);
 
   const navItems=[
     {id:"home",label:"Home",Icon:NavIcon.home},
@@ -290,7 +306,7 @@ export default function TradeJournal(){
 
           {/* key stats row 1 */}
           <div className="fi2" style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
-            <StatCard label="Monthly P/L" value={`${mp>=0?"+":""}${mp.toFixed(2)}%`} sub={`${mtp!==0?`pre-lev ${mtp>=0?"+":""}${mtp.toFixed(2)}%`:""} · ${md>=0?"+":""}$${Math.abs(md).toFixed(0)}`} color={mp>=0?g:r} accent={mp>=0?g:r}/>
+            <StatCard label="Monthly P/L" value={`${mp>=0?"+":""}${mp.toFixed(2)}%`} sub={`${mtp!==0?`Trade P&L ${mtp>=0?"+":""}${mtp.toFixed(2)}%`:""} · ${md>=0?"+":""}$${Math.abs(md).toFixed(0)}`} color={mp>=0?g:r} accent={mp>=0?g:r}/>
             <StatCard label="Win Rate" value={`${allStats.winRate}%`} sub={`${allStats.wins}W · ${allStats.losses}L · ${allStats.be}BE`} color={parseFloat(allStats.winRate)>=50?g:r} accent={parseFloat(allStats.winRate)>=50?g:r}/>
             <StatCard label="Profit Factor" value={allStats.profitFactor} sub="gross W / gross L" color={parseFloat(allStats.profitFactor)>=1.5?g:parseFloat(allStats.profitFactor)>=1?y:r} accent={parseFloat(allStats.profitFactor)>=1.5?g:parseFloat(allStats.profitFactor)>=1?y:r} tooltip="Profit Factor — sum of winning trades / sum of losing trades. >1.5 healthy, >2 strong."/>
             <StatCard label="Expectancy" value={`${parseFloat(allStats.expectancy)>=0?"+":""}${allStats.expectancy}%`} sub="avg per trade" color={parseFloat(allStats.expectancy)>=0?g:r} accent={bl} tooltip="(WinRate × AvgWin) − (LossRate × AvgLoss). Avg % expected per trade."/>
@@ -312,6 +328,30 @@ export default function TradeJournal(){
             </div>
             <EQ trades={trades}/>
           </div>
+
+          {/* top performers — most profitable setup & regime */}
+          {(topSetup||topRegime)&&<div className="fi2" style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+            {topSetup&&<div style={{flex:1,minWidth:200,background:`linear-gradient(180deg,${bg2} 0%,${bg2}cc 100%)`,border:`1px solid ${b1}`,borderRadius:12,padding:"16px 18px",position:"relative",overflow:"hidden",transition:"all 0.15s"}} className="stat-card">
+              <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${topSetup.color},${topSetup.color}66)`,borderRadius:"12px 12px 0 0"}}/>
+              <div style={{fontSize:9,color:gr,textTransform:"uppercase",letterSpacing:"0.1em",fontFamily:F,fontWeight:600,marginBottom:6}}>Top Setup</div>
+              <div style={{fontSize:15,fontWeight:700,color:topSetup.color,fontFamily:F,letterSpacing:"-0.01em",marginBottom:6}}>{topSetup.label}</div>
+              <div style={{display:"flex",gap:14,fontSize:10,fontFamily:F}}>
+                <span><span style={{color:gr}}>P&L </span><span style={{color:topSetup.pnl>=0?g:r,fontWeight:700}}>{topSetup.pnl>=0?"+":""}{topSetup.pnl.toFixed(2)}%</span></span>
+                <span><span style={{color:gr}}>Win </span><span style={{color:topSetup.winRate>=50?g:r,fontWeight:700}}>{topSetup.winRate.toFixed(0)}%</span></span>
+                <span><span style={{color:gr}}>{topSetup.count} trades</span></span>
+              </div>
+            </div>}
+            {topRegime&&<div style={{flex:1,minWidth:200,background:`linear-gradient(180deg,${bg2} 0%,${bg2}cc 100%)`,border:`1px solid ${b1}`,borderRadius:12,padding:"16px 18px",position:"relative",overflow:"hidden",transition:"all 0.15s"}} className="stat-card">
+              <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${topRegime.color},${topRegime.color}66)`,borderRadius:"12px 12px 0 0"}}/>
+              <div style={{fontSize:9,color:gr,textTransform:"uppercase",letterSpacing:"0.1em",fontFamily:F,fontWeight:600,marginBottom:6}}>Top Regime</div>
+              <div style={{fontSize:15,fontWeight:700,color:topRegime.color,fontFamily:F,letterSpacing:"-0.01em",marginBottom:6}}>{topRegime.label}</div>
+              <div style={{display:"flex",gap:14,fontSize:10,fontFamily:F}}>
+                <span><span style={{color:gr}}>P&L </span><span style={{color:topRegime.pnl>=0?g:r,fontWeight:700}}>{topRegime.pnl>=0?"+":""}{topRegime.pnl.toFixed(2)}%</span></span>
+                <span><span style={{color:gr}}>Win </span><span style={{color:topRegime.winRate>=50?g:r,fontWeight:700}}>{topRegime.winRate.toFixed(0)}%</span></span>
+                <span><span style={{color:gr}}>{topRegime.count} trades</span></span>
+              </div>
+            </div>}
+          </div>}
 
           {/* recent trades */}
           <div className="fi3" style={cS}>
@@ -424,19 +464,25 @@ export default function TradeJournal(){
         {/* ════════════ P&L ════════════ */}
         {view==="pnl"&&(<div className="fi">
           {/* monthly header */}
-          <div style={{background:`linear-gradient(135deg,${bg2} 0%,${bg2}80 100%)`,border:`1px solid ${b1}`,borderRadius:16,padding:"20px 22px",marginBottom:12}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+          <div style={{background:`linear-gradient(135deg,${bg2} 0%,${bg2}80 100%)`,border:`1px solid ${b1}`,borderRadius:16,padding:"24px 26px",marginBottom:12}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
               <button onClick={()=>setCalMonth(new Date(yr,mo-1,1))} style={{width:30,height:30,borderRadius:8,background:bg,border:`1px solid ${b1}`,color:gr,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:F,transition:"all 0.15s"}}>‹</button>
               <span style={{fontSize:15,fontWeight:700,fontFamily:FD,letterSpacing:"0.01em"}}>{mn[mo]} {yr}</span>
               <button onClick={()=>setCalMonth(new Date(yr,mo+1,1))} style={{width:30,height:30,borderRadius:8,background:bg,border:`1px solid ${b1}`,color:gr,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:F,transition:"all 0.15s"}}>›</button>
             </div>
-            <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:6}}>
-              <span style={{fontSize:30,fontWeight:700,color:mp>=0?g:r,fontFamily:F,letterSpacing:"-0.03em"}}>{mp>=0?"+":""}{mp.toFixed(2)}%</span>
-              {md!==0&&<span style={{fontSize:14,fontWeight:600,color:mp>=0?g:r,opacity:0.6}}>{md>=0?"+":""}${Math.abs(md).toFixed(0)}</span>}
-              {mtp!==0&&<span style={{fontSize:13,fontWeight:600,color:gr}}>· pre-lev <span style={{color:mtp>=0?g:r}}>{mtp>=0?"+":""}{mtp.toFixed(2)}%</span></span>}
+            {/* primary monthly P&L */}
+            <div style={{fontSize:9,color:gr,textTransform:"uppercase",letterSpacing:"0.12em",fontFamily:F,fontWeight:600,marginBottom:6}}>Monthly P&L</div>
+            <div style={{display:"flex",alignItems:"baseline",gap:12,marginBottom:14,flexWrap:"wrap"}}>
+              <span style={{fontSize:42,fontWeight:800,color:mp>=0?g:r,fontFamily:F,letterSpacing:"-0.035em",lineHeight:1}}>{mp>=0?"+":""}{mp.toFixed(2)}%</span>
+              {md!==0&&<span style={{fontSize:18,fontWeight:700,color:mp>=0?g:r,opacity:0.7,fontFamily:F,letterSpacing:"-0.02em"}}>{md>=0?"+":"-"}${Math.abs(md).toFixed(0)}</span>}
             </div>
-            <div style={{display:"flex",gap:18,marginTop:8}}>
-              {[{l:"Trades",v:mt},{l:"Green Days",v:mw,c:g},{l:"Red Days",v:ml,c:r}].map(x=><div key={x.l}><span style={{fontSize:9,color:gr,textTransform:"uppercase",letterSpacing:"0.08em",fontFamily:F}}>{x.l} </span><span style={{fontSize:13,fontWeight:700,color:x.c||w,fontFamily:F}}>{x.v}</span></div>)}
+            {/* Trade P&L % at same visual weight */}
+            {mtp!==0&&<div style={{marginBottom:14,paddingTop:12,borderTop:`1px solid ${b1}`}}>
+              <div style={{fontSize:9,color:gr,textTransform:"uppercase",letterSpacing:"0.12em",fontFamily:F,fontWeight:600,marginBottom:4}}>Trade P&L % <span style={{color:gd,letterSpacing:"0.04em",textTransform:"none"}}>· pre-leverage</span></div>
+              <span style={{fontSize:22,fontWeight:700,color:mtp>=0?g:r,fontFamily:F,letterSpacing:"-0.02em"}}>{mtp>=0?"+":""}{mtp.toFixed(2)}%</span>
+            </div>}
+            <div style={{display:"flex",gap:22,paddingTop:12,borderTop:`1px solid ${b1}`}}>
+              {[{l:"Trades",v:mt},{l:"Green Days",v:mw,c:g},{l:"Red Days",v:ml,c:r}].map(x=><div key={x.l}><div style={{fontSize:9,color:gr,textTransform:"uppercase",letterSpacing:"0.1em",fontFamily:F,fontWeight:600,marginBottom:3}}>{x.l}</div><div style={{fontSize:15,fontWeight:700,color:x.c||w,fontFamily:F,letterSpacing:"-0.01em"}}>{x.v}</div></div>)}
             </div>
           </div>
           {/* calendar */}
@@ -449,7 +495,7 @@ export default function TradeJournal(){
                 const dp=pbd[ds],dd=dbd[ds],dc=tbd[ds],hd=dp!==undefined,ip=hd&&dp>0,iN=hd&&dp<0,iS2=selDay===ds,iT=td2.getFullYear()===yr&&td2.getMonth()===mo&&td2.getDate()===day;
                 return(<button key={ds} onClick={()=>hd&&setSelDay(iS2?null:ds)} style={{minHeight:64,borderRadius:8,padding:"5px 4px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",gap:1,cursor:hd?"pointer":"default",background:iS2?`${ip?g:r}20`:ip?`${g}08`:iN?`${r}08`:bg,border:`1px solid ${iS2?(ip?g:r):ip?`${g}20`:iN?`${r}20`:b1}`,fontFamily:F,transition:"all 0.1s"}}>
                   <div style={{fontSize:9,color:iT?cy:gr,fontWeight:iT?700:400,alignSelf:"flex-start"}}>{iT?<span style={{background:cy,color:bg,borderRadius:"50%",width:16,height:16,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700}}>{day}</span>:day}</div>
-                  {hd&&<><div style={{fontSize:10,fontWeight:700,color:ip?g:iN?r:y,marginTop:1}}>{ip?"+":""}{dp.toFixed(1)}%</div>{dd!==undefined&&dd!==0&&<div style={{fontSize:8,color:ip?g:r,opacity:0.6}}>{dd>=0?"+":" "}-${Math.abs(dd).toFixed(0)}</div>}<div style={{fontSize:8,color:gr}}>{dc}t</div></>}
+                  {hd&&<><div style={{fontSize:10,fontWeight:700,color:ip?g:iN?r:y,marginTop:1}}>{ip?"+":""}{dp.toFixed(1)}%</div>{dd!==undefined&&dd!==0&&<div style={{fontSize:8,color:ip?g:r,opacity:0.7}}>{dd>=0?"+":"-"}${Math.abs(dd).toFixed(0)}</div>}<div style={{fontSize:8,color:gr}}>{dc} trade{dc!==1?"s":""}</div></>}
                 </button>);
               })}
             </div>
@@ -545,7 +591,7 @@ export default function TradeJournal(){
           <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
             <StatCard label="P&L %" value={`${parseFloat(s.totalPnl)>=0?"+":""}${s.totalPnl}%`} color={parseFloat(s.totalPnl)>=0?g:r} accent={parseFloat(s.totalPnl)>=0?g:r}/>
             <StatCard label="P&L $" value={parseFloat(s.totalDollar)!==0?`${parseFloat(s.totalDollar)>=0?"+":""}$${Math.abs(parseFloat(s.totalDollar)).toFixed(0)}`:"—"} color={parseFloat(s.totalDollar)>=0?g:r}/>
-            <StatCard label="Pre-Lev %" value={`${parseFloat(s.totalTradePercent)>=0?"+":""}${s.totalTradePercent}%`} color={parseFloat(s.totalTradePercent)>=0?g:r}/>
+            <StatCard label="Trade P&L %" value={`${parseFloat(s.totalTradePercent)>=0?"+":""}${s.totalTradePercent}%`} sub="pre-leverage" color={parseFloat(s.totalTradePercent)>=0?g:r}/>
             <StatCard label="Max DD" value={`-${maxDD}%`} color={parseFloat(maxDD)<10?g:parseFloat(maxDD)<20?y:r} accent={r}/>
           </div>
           {/* extremes */}
@@ -553,6 +599,30 @@ export default function TradeJournal(){
             <StatCard label="Best Trade" value={`+${s.bestTrade}%`} color={g}/>
             <StatCard label="Worst Trade" value={`${s.worstTrade}%`} color={r}/>
           </div>
+
+          {/* top performers — most profitable setup & regime */}
+          {(topSetup||topRegime)&&<div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+            {topSetup&&<div style={{flex:1,minWidth:200,background:`linear-gradient(180deg,${bg2} 0%,${bg2}cc 100%)`,border:`1px solid ${b1}`,borderRadius:12,padding:"16px 18px",position:"relative",overflow:"hidden"}} className="stat-card">
+              <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${topSetup.color},${topSetup.color}66)`,borderRadius:"12px 12px 0 0"}}/>
+              <div style={{fontSize:9,color:gr,textTransform:"uppercase",letterSpacing:"0.1em",fontFamily:F,fontWeight:600,marginBottom:6}}>Most Profitable Setup</div>
+              <div style={{fontSize:15,fontWeight:700,color:topSetup.color,fontFamily:F,letterSpacing:"-0.01em",marginBottom:6}}>{topSetup.label}</div>
+              <div style={{display:"flex",gap:14,fontSize:10,fontFamily:F}}>
+                <span><span style={{color:gr}}>P&L </span><span style={{color:topSetup.pnl>=0?g:r,fontWeight:700}}>{topSetup.pnl>=0?"+":""}{topSetup.pnl.toFixed(2)}%</span></span>
+                <span><span style={{color:gr}}>Win </span><span style={{color:topSetup.winRate>=50?g:r,fontWeight:700}}>{topSetup.winRate.toFixed(0)}%</span></span>
+                <span><span style={{color:gr}}>{topSetup.count} trades</span></span>
+              </div>
+            </div>}
+            {topRegime&&<div style={{flex:1,minWidth:200,background:`linear-gradient(180deg,${bg2} 0%,${bg2}cc 100%)`,border:`1px solid ${b1}`,borderRadius:12,padding:"16px 18px",position:"relative",overflow:"hidden"}} className="stat-card">
+              <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${topRegime.color},${topRegime.color}66)`,borderRadius:"12px 12px 0 0"}}/>
+              <div style={{fontSize:9,color:gr,textTransform:"uppercase",letterSpacing:"0.1em",fontFamily:F,fontWeight:600,marginBottom:6}}>Most Profitable Regime</div>
+              <div style={{fontSize:15,fontWeight:700,color:topRegime.color,fontFamily:F,letterSpacing:"-0.01em",marginBottom:6}}>{topRegime.label}</div>
+              <div style={{display:"flex",gap:14,fontSize:10,fontFamily:F}}>
+                <span><span style={{color:gr}}>P&L </span><span style={{color:topRegime.pnl>=0?g:r,fontWeight:700}}>{topRegime.pnl>=0?"+":""}{topRegime.pnl.toFixed(2)}%</span></span>
+                <span><span style={{color:gr}}>Win </span><span style={{color:topRegime.winRate>=50?g:r,fontWeight:700}}>{topRegime.winRate.toFixed(0)}%</span></span>
+                <span><span style={{color:gr}}>{topRegime.count} trades</span></span>
+              </div>
+            </div>}
+          </div>}
 
           {/* R-multiple distribution histogram */}
           <div style={cS}>
