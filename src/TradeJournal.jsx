@@ -189,7 +189,7 @@ export default function TradeJournal(){
           {/* greeting */}
           <div className="fi" style={{marginBottom:24}}>
             <div style={{fontSize:22,fontWeight:800,fontFamily:FD,letterSpacing:"-0.02em",lineHeight:1.2}}>
-              {new Date().getHours()<12?"Good morning":"new Date().getHours()<17?Good afternoon":"Good evening"}, Titus.
+              {new Date().getHours()<12?"Good morning":new Date().getHours()<17?"Good afternoon":"Good evening"}, Titus.
             </div>
             <div style={{fontSize:12,color:gr,marginTop:4,fontFamily:F}}>{new Date().toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long"})}</div>
           </div>
