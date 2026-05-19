@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { db, storage } from "./firebase";
-import QuickEntry from "./QuickEntry";
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -84,8 +83,9 @@ export default function TradeJournal(){
   const pbd={},dbd={},tbd={},tlbd={};
   trades.forEach(t=>{if(!t.date)return;const p=parseFloat(t.pnl)||0,d=parseFloat(t.pnlDollar)||0;if(!pbd[t.date]){pbd[t.date]=0;dbd[t.date]=0;tbd[t.date]=0;tlbd[t.date]=[];}pbd[t.date]+=p;dbd[t.date]+=d;tbd[t.date]+=1;tlbd[t.date].push(t);});
   const ms=`${yr}-${String(mo+1).padStart(2,"0")}`;
-  let mp=0,md=0,mt=0,mw=0,ml=0;
+  let mp=0,md=0,mt=0,mw=0,ml=0,mtp=0;
   Object.keys(pbd).forEach(d=>{if(d.startsWith(ms)){mp+=pbd[d];md+=dbd[d]||0;mt+=tbd[d];if(pbd[d]>0)mw++;if(pbd[d]<0)ml++;}});
+  trades.forEach(t=>{if(t.date&&t.date.startsWith(ms)&&t.tradePercent)mtp+=parseFloat(t.tradePercent)||0;});
 
   return(
     <div style={{minHeight:"100vh",background:bg,color:w,fontFamily:F,paddingBottom:40}}>
@@ -97,7 +97,7 @@ export default function TradeJournal(){
       </div>
 
       <div style={{display:"flex",gap:4,padding:"8px 20px",borderBottom:`1px solid ${b1}`,background:bg2}}>
-        {[{id:"log",l:editingId?"✏️ Edit":"＋ Log"},{id:"quick",l:"⚡ Quick"},{id:"dashboard",l:"📅 P&L"},{id:"history",l:"📋 History"},{id:"stats",l:"📊 Stats"}].map(t=>
+        {[{id:"log",l:editingId?"✏️ Edit":"＋ Log"},{id:"dashboard",l:"📅 P&L"},{id:"history",l:"📋 History"},{id:"stats",l:"📊 Stats"}].map(t=>
           <button key={t.id} onClick={()=>{setView(t.id);setSelDay(null);}} style={{padding:"8px 16px",borderRadius:"8px 8px 0 0",border:"none",cursor:"pointer",fontSize:11,fontWeight:600,fontFamily:F,background:view===t.id?`${g}12`:"transparent",color:view===t.id?g:gr,borderBottom:view===t.id?`2px solid ${g}`:"2px solid transparent"}}>{t.l}</button>
         )}
       </div>
@@ -174,6 +174,7 @@ export default function TradeJournal(){
           <span style={{fontSize:12,color:gr,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.08em"}}>Monthly P/L: </span>
           <span style={{fontSize:22,fontWeight:700,color:mp>=0?g:r}}>{mp>=0?"+":""}{mp.toFixed(2)}%</span>
           {md!==0&&<span style={{fontSize:14,fontWeight:600,color:md>=0?g:r,opacity:0.7,marginLeft:8}}>({md>=0?"+":""}${Math.abs(md).toFixed(0)})</span>}
+          {mtp!==0&&<span style={{fontSize:12,color:gr,marginLeft:16}}>pre-lev: <span style={{color:mtp>=0?g:r,fontWeight:600}}>{mtp>=0?"+":""}{mtp.toFixed(2)}%</span></span>}
         </div>
         <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
           <SB label="Trades" value={mt}/><SB label="Green Days" value={mw} color={g}/><SB label="Red Days" value={ml} color={r}/><SB label="Monthly $" value={md!==0?`${md>=0?"+":""}$${Math.abs(md).toFixed(0)}`:"—"} color={md>=0?g:r}/>
@@ -251,10 +252,6 @@ export default function TradeJournal(){
           {regimeOptions.map(o=>{const rt=cs(trades.filter(t=>t.result&&t.regime===o.id));if(!rt.total)return null;return(<div key={o.id} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:`1px solid ${b1}`}}><div style={{width:3,height:24,background:o.color,borderRadius:2}}/><div style={{flex:1,fontSize:11,fontWeight:700,color:o.color}}>{o.label}</div><div style={{fontSize:10,color:gr}}>{rt.total}t</div><div style={{fontSize:10,color:parseFloat(rt.winRate)>=50?g:r,fontWeight:600,minWidth:45}}>{rt.winRate}%</div><div style={{fontSize:10,color:parseFloat(rt.totalPnl)>=0?g:r,fontWeight:600,minWidth:55}}>{parseFloat(rt.totalPnl)>=0?"+":""}{rt.totalPnl}%</div><div style={{fontSize:10,color:g,minWidth:40}}>{rt.avgRR}:1</div></div>);})}
         </div>
       </div>);})()}
-
-      {view==="quick"&&(<div className="fi" style={{display:"flex",justifyContent:"center"}}>
-        <QuickEntry onSaved={()=>setView("dashboard")} onCancel={()=>setView("dashboard")}/>
-      </div>)}
 
       </div>
     </div>
