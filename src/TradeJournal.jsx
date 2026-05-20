@@ -243,18 +243,34 @@ export default function AlphaJournal(){
       <div style={{position:"sticky",top:0,zIndex:100,background:`${bg}ee`,backdropFilter:"blur(14px)",WebkitBackdropFilter:"blur(14px)",borderBottom:`1px solid ${b1}`,padding:"0 20px",display:"flex",alignItems:"center",justifyContent:"space-between",height:54}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           {/* Alpha badge */}
-          <div style={{position:"relative",width:34,height:34,flexShrink:0}}>
-            <div style={{width:34,height:34,borderRadius:10,background:`linear-gradient(145deg,#0a0a12 0%,#0e0e1a 100%)`,border:`1px solid ${g}40`,boxShadow:`0 0 0 1px ${g}20, 0 4px 20px ${g}25, inset 0 1px 0 ${g}15`,display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <div style={{position:"relative",width:36,height:36,flexShrink:0}}>
+            <div style={{width:36,height:36,borderRadius:10,background:`linear-gradient(145deg,#08080f 0%,#0d0d18 100%)`,border:`1px solid ${g}35`,boxShadow:`0 0 0 1px ${g}18, 0 4px 24px ${g}22, inset 0 1px 0 ${g}12`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <svg width="22" height="22" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <defs>
-                  <linearGradient id="alphaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <linearGradient id="aG" x1="10%" y1="10%" x2="90%" y2="90%">
                     <stop offset="0%" stopColor={g}/>
                     <stop offset="100%" stopColor={cy}/>
                   </linearGradient>
+                  <filter id="aGlow">
+                    <feGaussianBlur stdDeviation="1.5" result="b"/>
+                    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                  </filter>
                 </defs>
-                <path d="M12 3L4 20h3.5l1.5-3.5h6l1.5 3.5H20L12 3z" fill="url(#alphaGrad)" opacity="0.15"/>
-                <path d="M12 6.5L6.5 18.5H9l1.5-3.5h3l1.5 3.5h2.5L12 6.5z" fill="none" stroke="url(#alphaGrad)" strokeWidth="1.5" strokeLinejoin="round"/>
-                <line x1="9.8" y1="13.5" x2="14.2" y2="13.5" stroke="url(#alphaGrad)" strokeWidth="1.5" strokeLinecap="round"/>
+                {/* Main alpha body — italic oval loop */}
+                <path
+                  d="M62 28 C62 28 52 14 36 18 C20 22 16 38 18 50 C20 64 30 76 44 74 C54 72 60 64 62 56"
+                  stroke="url(#aG)" strokeWidth="5.5" fill="none" strokeLinecap="round" filter="url(#aGlow)"
+                />
+                {/* Right descending stroke with tail curl */}
+                <path
+                  d="M62 28 C64 36 66 48 64 60 C62 70 58 80 52 88 C48 92 44 94 40 90"
+                  stroke="url(#aG)" strokeWidth="5.5" fill="none" strokeLinecap="round" filter="url(#aGlow)"
+                />
+                {/* Diagonal slash across the middle — the signature stroke */}
+                <path
+                  d="M22 44 C38 40 56 38 76 32"
+                  stroke="url(#aG)" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.85" filter="url(#aGlow)"
+                />
               </svg>
             </div>
           </div>
