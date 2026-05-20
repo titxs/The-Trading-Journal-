@@ -148,6 +148,7 @@ export default function TradeJournal(){
   const[saving,setSaving]=useState(false);
   const[ssFiles,setSsFiles]=useState([]);
   const[sFilter,setSFilter]=useState("all");
+  const[lightbox,setLightbox]=useState(null);
   const fRef=useRef(null);
 
   useEffect(()=>{
@@ -502,12 +503,39 @@ export default function TradeJournal(){
           </div>
           {selDay&&tlbd[selDay]&&<div className="fi" style={{marginBottom:12}}>
             <div style={{fontSize:10,color:gr,fontFamily:F,textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:600,marginBottom:8}}>{selDay}</div>
-            {tlbd[selDay].map(t=><div key={t.id} style={{...cS,padding:"12px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer",marginBottom:6}} onClick={()=>{setCt({...defaultTrade,...t});setEditingId(t.id);setSsFiles([]);setView("log");}}>
-              <div style={{width:6,height:6,borderRadius:"50%",background:t.result==="WIN"?g:t.result==="LOSS"?r:y,flexShrink:0}}/>
-              <div style={{flex:1}}><span style={{fontSize:11,fontWeight:600}}>{t.pair}</span><span style={{fontSize:10,color:gr,marginLeft:8}}>{t.direction}</span></div>
-              <div style={{fontSize:12,fontWeight:700,color:parseFloat(t.pnl)>=0?g:r}}>{parseFloat(t.pnl)>=0?"+":""}{t.pnl}%</div>
-              <span style={{fontSize:9,color:bl}}>Edit →</span>
-            </div>)}
+            {tlbd[selDay].map(t=>{
+              const rMult = calcRMultiple(t);
+              return(
+              <div key={t.id} style={{...cS,padding:"14px 16px",marginBottom:8}}>
+                {/* header row */}
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,paddingBottom:12,borderBottom:`1px solid ${b1}`}}>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:t.result==="WIN"?g:t.result==="LOSS"?r:y,flexShrink:0,boxShadow:`0 0 6px ${t.result==="WIN"?g:t.result==="LOSS"?r:y}60`}}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <span style={{fontSize:12,fontWeight:600}}>{t.pair}</span>
+                    <span style={{fontSize:10,color:gr,marginLeft:8}}>{t.direction}</span>
+                    {t.setup&&<span style={{fontSize:9,color:gd,marginLeft:8}}>{setupOptions.find(s=>s.id===t.setup)?.label}</span>}
+                  </div>
+                  {rMult!==null&&<span style={{fontSize:10,fontWeight:700,color:rMult>=0?g:r,fontFamily:F,padding:"3px 7px",borderRadius:5,background:rMult>=0?`${g}10`:`${r}10`,border:`1px solid ${rMult>=0?g:r}25`}}>{rMult>=0?"+":""}{rMult.toFixed(1)}R</span>}
+                  {t.pnl&&<span style={{fontSize:13,fontWeight:700,color:parseFloat(t.pnl)>=0?g:r}}>{parseFloat(t.pnl)>=0?"+":""}{t.pnl}%</span>}
+                </div>
+                {/* details */}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10,marginBottom:10}}>{[{l:"Entry",v:t.entry},{l:"Stop",v:t.stop},{l:"TP1",v:t.tp1},{l:"Close",v:t.closePrice}].map(x=><div key={x.l}><div style={{fontSize:9,color:gr,fontFamily:F}}>{x.l}</div><div style={{fontSize:11,fontWeight:600}}>{x.v||"—"}</div></div>)}</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10,marginBottom:10}}>{[{l:"R:R",v:t.rr?`${t.rr}:1`:"—",c:g},{l:"Leverage",v:t.leverage||"—"},{l:"Trade %",v:t.tradePercent?`${t.tradePercent}%`:"—"},{l:"TP Hits",v:`${t.hitTp1?"TP1✓ ":""}${t.hitTp2?"TP2✓":""}`||"—"}].map(x=><div key={x.l}><div style={{fontSize:9,color:gr,fontFamily:F}}>{x.l}</div><div style={{fontSize:11,fontWeight:600,color:x.c||w}}>{x.v}</div></div>)}</div>
+                {t.keyLevel&&<div style={{marginBottom:6,fontSize:10}}><span style={{color:gr}}>Key Level: </span><span style={{color:w}}>{t.keyLevel}</span></div>}
+                {t.levelType?.length>0&&<div style={{marginBottom:6,fontSize:10}}><span style={{color:gr}}>Levels: </span><span style={{color:bl}}>{t.levelType.join(" · ")}</span></div>}
+                {t.confluence?.length>0&&<div style={{marginBottom:6,fontSize:10}}><span style={{color:gr}}>Confluence: </span><span style={{color:cy}}>{t.confluence.join(" · ")}</span></div>}
+                {t.confirmed&&<div style={{marginBottom:5,fontSize:10}}><span style={{color:gr}}>Confirmation: </span>{t.confirmed}</div>}
+                {t.mistakes&&<div style={{marginBottom:5,fontSize:10}}><span style={{color:gr}}>Mistakes: </span><span style={{color:r}}>{t.mistakes}</span></div>}
+                {t.different&&<div style={{marginBottom:5,fontSize:10}}><span style={{color:gr}}>Do Different: </span><span style={{color:y}}>{t.different}</span></div>}
+                {t.notes&&<div style={{marginBottom:5,fontSize:10}}><span style={{color:gr}}>Notes: </span>{t.notes}</div>}
+                {/* bigger clickable screenshots */}
+                {t.screenshots?.length>0&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(240px, 1fr))",gap:10,marginTop:14}}>{t.screenshots.map((s,i)=><img key={i} src={s} alt="" onClick={()=>setLightbox(s)} style={{width:"100%",height:180,objectFit:"cover",borderRadius:8,border:`1px solid ${b1}`,cursor:"zoom-in",transition:"border-color 0.15s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=bl} onMouseLeave={e=>e.currentTarget.style.borderColor=b1}/>)}</div>}
+                <div style={{display:"flex",gap:8,marginTop:14}}>
+                  <button onClick={()=>{setCt({...defaultTrade,...t});setEditingId(t.id);setSsFiles([]);setView("log");}} style={{padding:"6px 14px",borderRadius:6,background:`${bl}12`,border:`1px solid ${bl}25`,color:bl,fontSize:10,fontFamily:F,fontWeight:600,cursor:"pointer"}}>Edit</button>
+                  <button onClick={()=>{if(confirm("Delete this trade?"))del(t.id);}} style={{padding:"6px 14px",borderRadius:6,background:`${r}10`,border:`1px solid ${r}20`,color:r,fontSize:10,fontFamily:F,fontWeight:600,cursor:"pointer"}}>Delete</button>
+                </div>
+              </div>
+            );})}
           </div>}
           <div style={cS}>
             <div style={{fontSize:9,color:gr,textTransform:"uppercase",letterSpacing:"0.1em",fontFamily:F,fontWeight:600,marginBottom:12,display:"flex",justifyContent:"space-between"}}>
@@ -549,7 +577,7 @@ export default function TradeJournal(){
                 {t.confirmed&&<div style={{marginBottom:5,fontSize:10}}><span style={{color:gr}}>Confirmation: </span>{t.confirmed}</div>}
                 {t.mistakes&&<div style={{marginBottom:5,fontSize:10}}><span style={{color:gr}}>Mistakes: </span><span style={{color:r}}>{t.mistakes}</span></div>}
                 {t.notes&&<div style={{marginBottom:5,fontSize:10}}><span style={{color:gr}}>Notes: </span>{t.notes}</div>}
-                {t.screenshots?.length>0&&<div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}}>{t.screenshots.map((s,i)=><img key={i} src={s} alt="" style={{width:100,height:70,objectFit:"cover",borderRadius:6,border:`1px solid ${b1}`}}/>)}</div>}
+                {t.screenshots?.length>0&&<div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}}>{t.screenshots.map((s,i)=><img key={i} src={s} alt="" onClick={e=>{e.stopPropagation();setLightbox(s);}} style={{width:100,height:70,objectFit:"cover",borderRadius:6,border:`1px solid ${b1}`,cursor:"zoom-in"}}/>)}</div>}
                 <div style={{display:"flex",gap:8,marginTop:12}}>
                   <button onClick={e=>{e.stopPropagation();setCt({...defaultTrade,...t});setEditingId(t.id);setSsFiles([]);setView("log");}} style={{padding:"6px 14px",borderRadius:6,background:`${bl}12`,border:`1px solid ${bl}25`,color:bl,fontSize:10,fontFamily:F,fontWeight:600,cursor:"pointer"}}>Edit</button>
                   <button onClick={e=>{e.stopPropagation();if(confirm("Delete this trade?"))del(t.id);}} style={{padding:"6px 14px",borderRadius:6,background:`${r}10`,border:`1px solid ${r}20`,color:r,fontSize:10,fontFamily:F,fontWeight:600,cursor:"pointer"}}>Delete</button>
@@ -657,6 +685,11 @@ export default function TradeJournal(){
         </div>);})()}
 
       </div>
+      {/* screenshot lightbox */}
+      {lightbox&&<div onClick={()=>setLightbox(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24,cursor:"zoom-out",animation:"fadeIn 0.15s ease"}}>
+        <button onClick={e=>{e.stopPropagation();setLightbox(null);}} style={{position:"absolute",top:18,right:18,width:38,height:38,borderRadius:"50%",background:"rgba(255,255,255,0.08)",border:`1px solid ${b2}`,color:w,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:F}}>×</button>
+        <img src={lightbox} alt="" onClick={e=>e.stopPropagation()} style={{maxWidth:"95vw",maxHeight:"92vh",objectFit:"contain",borderRadius:8,boxShadow:"0 12px 48px rgba(0,0,0,0.6)",cursor:"default"}}/>
+      </div>}
     </div>
   );
 }
