@@ -136,7 +136,7 @@ const NavIcon = {
 };
 
 // ── main ──────────────────────────────────────────────────────────────────────
-export default function TradeJournal(){
+export default function AlphaJournal(){
   const[trades,setTrades]=useState([]);
   const[ct,setCt]=useState({...defaultTrade});
   const[view,setView]=useState("home");
@@ -242,9 +242,24 @@ export default function TradeJournal(){
       {/* ── top bar ── */}
       <div style={{position:"sticky",top:0,zIndex:100,background:`${bg}ee`,backdropFilter:"blur(14px)",WebkitBackdropFilter:"blur(14px)",borderBottom:`1px solid ${b1}`,padding:"0 20px",display:"flex",alignItems:"center",justifyContent:"space-between",height:54}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:30,height:30,borderRadius:8,background:`linear-gradient(135deg,${g},${cy})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:bg,fontFamily:FD,boxShadow:`0 4px 16px ${g}30`}}>T</div>
+          {/* Alpha badge */}
+          <div style={{position:"relative",width:34,height:34,flexShrink:0}}>
+            <div style={{width:34,height:34,borderRadius:10,background:`linear-gradient(145deg,#0a0a12 0%,#0e0e1a 100%)`,border:`1px solid ${g}40`,boxShadow:`0 0 0 1px ${g}20, 0 4px 20px ${g}25, inset 0 1px 0 ${g}15`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <defs>
+                  <linearGradient id="alphaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor={g}/>
+                    <stop offset="100%" stopColor={cy}/>
+                  </linearGradient>
+                </defs>
+                <path d="M12 3L4 20h3.5l1.5-3.5h6l1.5 3.5H20L12 3z" fill="url(#alphaGrad)" opacity="0.15"/>
+                <path d="M12 6.5L6.5 18.5H9l1.5-3.5h3l1.5 3.5h2.5L12 6.5z" fill="none" stroke="url(#alphaGrad)" strokeWidth="1.5" strokeLinejoin="round"/>
+                <line x1="9.8" y1="13.5" x2="14.2" y2="13.5" stroke="url(#alphaGrad)" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </div>
+          </div>
           <div>
-            <div style={{fontSize:13,fontWeight:700,fontFamily:FD,letterSpacing:"0.01em",lineHeight:1}}>Trading Journal</div>
+            <div style={{fontSize:13,fontWeight:700,fontFamily:FD,letterSpacing:"0.01em",lineHeight:1,background:`linear-gradient(90deg,${w} 0%,${cy} 120%)`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>The Alpha Journal</div>
             <div style={{fontSize:8,color:gd,fontFamily:F,letterSpacing:"0.1em",marginTop:2}}>ORDERFLOW · BTC/USD</div>
           </div>
         </div>
