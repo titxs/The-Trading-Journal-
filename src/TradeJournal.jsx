@@ -242,40 +242,11 @@ export default function AlphaJournal(){
       {/* ── top bar ── */}
       <div style={{position:"sticky",top:0,zIndex:100,background:`${bg}ee`,backdropFilter:"blur(14px)",WebkitBackdropFilter:"blur(14px)",borderBottom:`1px solid ${b1}`,padding:"0 20px",display:"flex",alignItems:"center",justifyContent:"space-between",height:54}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          {/* Alpha badge */}
-          <div style={{position:"relative",width:36,height:36,flexShrink:0}}>
-            <div style={{width:36,height:36,borderRadius:10,background:`linear-gradient(145deg,#08080f 0%,#0d0d18 100%)`,border:`1px solid ${g}35`,boxShadow:`0 0 0 1px ${g}18, 0 4px 24px ${g}22, inset 0 1px 0 ${g}12`,display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <svg width="22" height="22" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <linearGradient id="aG" x1="10%" y1="10%" x2="90%" y2="90%">
-                    <stop offset="0%" stopColor={g}/>
-                    <stop offset="100%" stopColor={cy}/>
-                  </linearGradient>
-                  <filter id="aGlow">
-                    <feGaussianBlur stdDeviation="1.5" result="b"/>
-                    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-                  </filter>
-                </defs>
-                {/* Main alpha body — italic oval loop */}
-                <path
-                  d="M62 28 C62 28 52 14 36 18 C20 22 16 38 18 50 C20 64 30 76 44 74 C54 72 60 64 62 56"
-                  stroke="url(#aG)" strokeWidth="5.5" fill="none" strokeLinecap="round" filter="url(#aGlow)"
-                />
-                {/* Right descending stroke with tail curl */}
-                <path
-                  d="M62 28 C64 36 66 48 64 60 C62 70 58 80 52 88 C48 92 44 94 40 90"
-                  stroke="url(#aG)" strokeWidth="5.5" fill="none" strokeLinecap="round" filter="url(#aGlow)"
-                />
-                {/* Diagonal slash across the middle — the signature stroke */}
-                <path
-                  d="M22 44 C38 40 56 38 76 32"
-                  stroke="url(#aG)" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.85" filter="url(#aGlow)"
-                />
-              </svg>
-            </div>
+          <div style={{width:34,height:34,borderRadius:9,background:`linear-gradient(145deg,#0d0d14,#0a0a10)`,border:`1px solid ${g}35`,boxShadow:`0 0 12px ${g}20, 0 4px 16px rgba(0,0,0,0.6), inset 0 1px 0 ${g}10`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <span style={{fontSize:22,fontStyle:"italic",fontWeight:900,fontFamily:"Georgia,'Times New Roman',serif",background:`linear-gradient(135deg,${cy} 0%,${g} 100%)`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",lineHeight:1,userSelect:"none",letterSpacing:"-0.02em"}}>α</span>
           </div>
           <div>
-            <div style={{fontSize:13,fontWeight:700,fontFamily:FD,letterSpacing:"0.01em",lineHeight:1,background:`linear-gradient(90deg,${w} 0%,${cy} 120%)`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>The Alpha Journal</div>
+            <div style={{fontSize:13,fontWeight:700,fontFamily:FD,letterSpacing:"0.01em",lineHeight:1,background:`linear-gradient(90deg,${w} 0%,${cy} 150%)`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>The Alpha Journal</div>
             <div style={{fontSize:8,color:gd,fontFamily:F,letterSpacing:"0.1em",marginTop:2}}>ORDERFLOW · BTC/USD</div>
           </div>
         </div>
