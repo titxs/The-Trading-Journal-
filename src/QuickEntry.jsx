@@ -10,6 +10,19 @@ const g="#00E676",r="#FF3D3D",y="#FFD600",bl="#448AFF",cy="#18FFFF";
 const w="#F0F0F5",gr="#6B6B80";
 
 const levelTypes = ["Daily VWAP","Weekly VWAP","Monthly VWAP","Yearly VWAP","VWAP Deviation Band","Anchored VWAP","POC","Composite POC","Naked POC","Composite VAH","Composite VAL","PD VAH","PD VAL","PD POC","PW VAH","PW VAL","PW POC","Monthly VAH","Monthly VAL","Monthly POC","FRVP POC","FRVP VAH","FRVP VAL","Single Prints","Poor High","Poor Low","Buying Tail","Selling Tail","Imbalance","Round Number"];
+const gradeOptions = ["A+","A","B","C"];
+const frameworkSetupOptions = [
+  { id: "vwap_revisit", label: "VWAP Revisit" },
+  { id: "value_area_edge", label: "Value Area Edge" },
+  { id: "seventy_pct", label: "70% Rule" },
+  { id: "profile_tail", label: "Profile Tail" },
+  { id: "poc_frvp_stack", label: "POC/FRVP Stack" },
+];
+const gexRegimeOptions = [
+  { id: "long_gamma", label: "Long Gamma", color: "#00E676" },
+  { id: "near_flip", label: "Near Flip", color: "#FFD600" },
+  { id: "short_gamma", label: "Short Gamma", color: "#FF3D3D" },
+];
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function calcRR(entry, stop, tp1) {
@@ -83,6 +96,10 @@ export default function QuickEntry({ onSaved, onCancel }) {
   const [leverage, setLeverage]   = useState("");
   const [levelType, setLevelType] = useState([]);
   const [keyLevel, setKeyLevel]   = useState("");
+  const [grade, setGrade]         = useState("");
+  const [frameworkSetup, setFrameworkSetup] = useState("");
+  const [gexRegime, setGexRegime] = useState("");
+  const [riskPercent, setRiskPercent] = useState("");
   const [notes, setNotes]         = useState("");
   const [screenshots, setScreenshots] = useState([]); // { file, preview }
   const [saving, setSaving]       = useState(false);
@@ -191,6 +208,17 @@ export default function QuickEntry({ onSaved, onCancel }) {
         createdAt: Date.now(),
         // flag so you can filter "needs review" later if you want
         quickEntry: true,
+        // CLAUDE.md framework fields
+        grade,
+        frameworkSetup,
+        gexRegime,
+        riskPercent,
+        gexFlip: "",
+        netGexTrend: "",
+        skewRead: "",
+        skewDays: "",
+        volRead: "",
+        macroEvent: false,
       };
 
       await setDoc(doc(db, "trades", id), trade);
@@ -262,6 +290,34 @@ export default function QuickEntry({ onSaved, onCancel }) {
           R:R → {rr}:1
         </div>
       )}
+
+      {/* CLAUDE.md framework fields */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+        <Field label="Grade">
+          <div style={{ display: "flex", gap: 4 }}>
+            {gradeOptions.map(x => (
+              <LevelPill key={x} label={x} selected={grade === x} onClick={() => setGrade(x)} />
+            ))}
+          </div>
+        </Field>
+        <Field label="Risk %">
+          <input value={riskPercent} onChange={e => setRiskPercent(e.target.value)} placeholder="e.g. 1.6" style={iS} />
+        </Field>
+      </div>
+      <Field label="GEX Regime">
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+          {gexRegimeOptions.map(o => (
+            <LevelPill key={o.id} label={o.label} selected={gexRegime === o.id} onClick={() => setGexRegime(o.id)} />
+          ))}
+        </div>
+      </Field>
+      <Field label="Framework Setup">
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+          {frameworkSetupOptions.map(o => (
+            <LevelPill key={o.id} label={o.label} selected={frameworkSetup === o.id} onClick={() => setFrameworkSetup(o.id)} />
+          ))}
+        </div>
+      </Field>
 
       {/* key level */}
       <Field label="Key Level Price (optional)">

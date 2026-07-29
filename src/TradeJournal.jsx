@@ -20,7 +20,22 @@ const setupOptions = [
 ];
 const levelTypes = ["Daily VWAP","Weekly VWAP","Monthly VWAP","Yearly VWAP","VWAP Deviation Band","Anchored VWAP","POC","Composite POC","Naked POC","Composite VAH","Composite VAL","PD VAH","PD VAL","PD POC","PW VAH","PW VAL","PW POC","Monthly VAH","Monthly VAL","Monthly POC","FRVP POC","FRVP VAH","FRVP VAL","Single Prints","Poor High","Poor Low","Buying Tail","Selling Tail","Imbalance","Round Number"];
 const confluenceOptions = ["CVD divergence at level","Spot vs perps divergence","OI rising (new positions)","OI dropping (forced closures)","Absorption (high vol, no movement)","Exhaustion (shrinking delta, wicks)","Delta bubble absorbed at level","Wall holding (filled not pulled)","Wall pulled (spoof)","Levels stacking (2+ same price)","Naked POC as magnet","Poor high/low target","Single prints in direction","Buying/selling tail quality","TPO shape confirms (b/P/B/D)","Backtest of broken level","Multi-TF VWAP alignment","Funding confirms crowded side","Net positioning extreme"];
-const defaultTrade = { id:"",date:"",pair:"BTC/USD",direction:"",regime:"",setup:"",keyLevel:"",levelType:[],levelTypeOther:"",confluence:[],confluenceOther:"",conviction:"",entryType:"",entry:"",stop:"",tp1:"",tp2:"",rr:"",posSize:"1%",leverage:"",result:"",pnl:"",pnlDollar:"",closePrice:"",hitTp1:false,hitTp2:false,followedRules:"",confirmed:"",mistakes:"",different:"",notes:"",screenshots:[] };
+const gradeOptions = ["A+","A","B","C"];
+const frameworkSetupOptions = [
+  { id: "vwap_revisit", label: "VWAP Revisit" },
+  { id: "value_area_edge", label: "Value Area Edge" },
+  { id: "seventy_pct", label: "70% Rule" },
+  { id: "profile_tail", label: "Profile Tail" },
+  { id: "poc_frvp_stack", label: "POC/FRVP Stack" },
+];
+const gexRegimeOptions = [
+  { id: "long_gamma", label: "Long Gamma", color: "#00E676" },
+  { id: "near_flip", label: "Near Flip", color: "#FFD600" },
+  { id: "short_gamma", label: "Short Gamma", color: "#FF3D3D" },
+];
+const netGexTrendOptions = ["rising", "falling", "flat"];
+const skewReadOptions = ["bullish", "bearish", "neutral"];
+const defaultTrade = { id:"",date:"",pair:"BTC/USD",direction:"",regime:"",setup:"",keyLevel:"",levelType:[],levelTypeOther:"",confluence:[],confluenceOther:"",conviction:"",entryType:"",entry:"",stop:"",tp1:"",tp2:"",rr:"",posSize:"1%",leverage:"",result:"",pnl:"",pnlDollar:"",closePrice:"",hitTp1:false,hitTp2:false,followedRules:"",confirmed:"",mistakes:"",different:"",notes:"",screenshots:[],grade:"",frameworkSetup:"",gexRegime:"",gexFlip:"",netGexTrend:"",skewRead:"",skewDays:"",volRead:"",macroEvent:false,riskPercent:"" };
 
 // ── design tokens ─────────────────────────────────────────────────────────────
 const F  = "'JetBrains Mono',monospace";
@@ -416,6 +431,24 @@ export default function AlphaJournal(){
           <Sec title="Regime & Setup" accent={y}>
             <Fld label="Market Regime"><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{regimeOptions.map(o=><RCard key={o.id} o={o} sel={ct.regime===o.id} onClick={()=>up("regime",o.id)}/>)}</div></Fld>
             <Fld label="Setup Type"><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{setupOptions.map(o=><RCard key={o.id} o={o} sel={ct.setup===o.id} onClick={()=>up("setup",o.id)}/>)}</div></Fld>
+          </Sec>
+          <Sec title="CLAUDE.md Framework" accent={pu}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <Fld label="Grade"><div style={{display:"flex",gap:6}}>{gradeOptions.map(x=><Pill key={x} label={x} selected={ct.grade===x} onClick={()=>up("grade",x)} color={x==="A+"?g:x==="A"?bl:x==="B"?y:r}/>)}</div></Fld>
+              <Fld label="GEX Regime"><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{gexRegimeOptions.map(o=><Pill key={o.id} label={o.label} selected={ct.gexRegime===o.id} onClick={()=>up("gexRegime",o.id)} color={o.color}/>)}</div></Fld>
+            </div>
+            <Fld label="Framework Setup"><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{frameworkSetupOptions.map(o=><Pill key={o.id} label={o.label} selected={ct.frameworkSetup===o.id} onClick={()=>up("frameworkSetup",o.id)} color={pu}/>)}</div></Fld>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+              <Fld label="GEX Flip"><input value={ct.gexFlip||""} onChange={e=>up("gexFlip",e.target.value)} placeholder="e.g. 63600" style={iS}/></Fld>
+              <Fld label="Net GEX Trend"><div style={{display:"flex",gap:4}}>{netGexTrendOptions.map(x=><Pill key={x} label={x} selected={ct.netGexTrend===x} onClick={()=>up("netGexTrend",x)} color={bl}/>)}</div></Fld>
+              <Fld label="Risk %"><input value={ct.riskPercent||""} onChange={e=>up("riskPercent",e.target.value)} placeholder="e.g. 1.6" style={iS}/></Fld>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+              <Fld label="Skew Read"><div style={{display:"flex",gap:4}}>{skewReadOptions.map(x=><Pill key={x} label={x} selected={ct.skewRead===x} onClick={()=>up("skewRead",x)} color={x==="bullish"?g:x==="bearish"?r:gr}/>)}</div></Fld>
+              <Fld label="Skew Days Sustained"><input value={ct.skewDays||""} onChange={e=>up("skewDays",e.target.value)} placeholder="e.g. 7" style={iS}/></Fld>
+              <Fld label="Vol Read"><input value={ct.volRead||""} onChange={e=>up("volRead",e.target.value)} placeholder="e.g. VRP+6.2%" style={iS}/></Fld>
+            </div>
+            <Fld label="Major Macro Event Today?"><div style={{display:"flex",gap:6}}>{[{v:true,l:"YES"},{v:false,l:"NO"}].map(x=><Pill key={x.l} label={x.l} selected={ct.macroEvent===x.v} onClick={()=>up("macroEvent",x.v)} color={x.v?r:g}/>)}</div></Fld>
           </Sec>
           <Sec title="Key Level" accent={bl}>
             <Fld label="Price Level"><input value={ct.keyLevel} onChange={e=>up("keyLevel",e.target.value)} placeholder="e.g. 78005" style={iS}/></Fld>
