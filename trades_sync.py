@@ -13,9 +13,11 @@ or npm required -- pure stdlib, talks to the Firebase REST APIs directly:
    collection.
 
 Usage (from this folder):
-    python3 trades_sync.py list                       # print all trades (id, date, direction, result, pnl)
-    python3 trades_sync.py get <id>                    # print one trade in full
-    python3 trades_sync.py upsert <id> '<json fields>'  # create/update a trade -- json is a flat dict of field:value
+    python3 trades_sync.py list                          # print all trades (id, date, direction, result, pnl)
+    python3 trades_sync.py get <id>                       # print one trade in full
+    python3 trades_sync.py upsert <id> '<json fields>'    # create/replace a trade entirely -- json is a flat dict of field:value
+    python3 trades_sync.py update <id> '<json fields>'    # edit only the given fields, leaves the rest of the doc untouched
+    python3 trades_sync.py attach <id> <file1> [file2 ...] # upload local screenshots to Firebase Storage and attach to the trade
     python3 trades_sync.py delete <id>
 
 Field shape matches src/TradeJournal.jsx's `defaultTrade` -- see that file for
@@ -25,24 +27,34 @@ pnl, pnlDollar, closePrice, notes, screenshots[], createdAt, ...).
 """
 
 import json
+import mimetypes
+import os
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
+import uuid
 
 API_KEY = "AIzaSyCE2inSOEE-dWIkNOND_hBGfkYeZbgopDw"
 PROJECT = "the-trading-journal-f677a"
+BUCKET = "the-trading-journal-f677a.firebasestorage.app"
 COLLECTION = "trades"
 BASE = f"https://firestore.googleapis.com/v1/projects/{PROJECT}/databases/(default)/documents/{COLLECTION}"
 
 
-def _request(url, token=None, method="GET", body=None):
-    headers = {"Content-Type": "application/json"}
+def _request(url, token=None, method="GET", body=None, raw_data=None, content_type=None):
+    headers = {}
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    data = json.dumps(body).encode() if body is not None else None
+    if raw_data is not None:
+        data = raw_data
+        headers["Content-Type"] = content_type or "application/octet-stream"
+    else:
+        headers["Content-Type"] = "application/json"
+        data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(req, timeout=20) as r:
+        with urllib.request.urlopen(req, timeout=60) as r:
             return json.loads(r.read() or b"{}")
     except urllib.error.HTTPError as e:
         sys.exit(f"HTTP {e.code} on {method} {url}: {e.read().decode()[:500]}")
@@ -123,12 +135,54 @@ def get_trade(token, doc_id):
 
 
 def upsert_trade(token, doc_id, fields):
+    """Full overwrite -- replaces every field on the doc. Use update_trade_fields
+    for editing a subset of fields on an existing trade without clobbering the rest."""
     body = {"fields": dict_to_fields(fields)}
     _request(f"{BASE}/{doc_id}", token=token, method="PATCH", body=body)
 
 
+def update_trade_fields(token, doc_id, fields):
+    """Partial update -- only touches the given field names, leaves everything else alone."""
+    mask = "&".join(f"updateMask.fieldPaths={urllib.parse.quote(k)}" for k in fields)
+    url = f"{BASE}/{doc_id}?{mask}"
+    body = {"fields": dict_to_fields(fields)}
+    _request(url, token=token, method="PATCH", body=body)
+
+
 def delete_trade(token, doc_id):
     _request(f"{BASE}/{doc_id}", token=token, method="DELETE")
+
+
+def upload_screenshot(token, trade_id, file_path):
+    """Uploads a local image to Firebase Storage under the same screenshots/<tradeId>/
+    path the app itself uses, and returns a public download URL. Firebase auto-assigns
+    a downloadTokens value on upload -- just read it back rather than trying to set one
+    (Google now blocks writing that metadata field directly)."""
+    fname = os.path.basename(file_path)
+    object_path = f"screenshots/{trade_id}/{int(__import__('time').time() * 1000)}_{fname}"
+    encoded_path = urllib.parse.quote(object_path, safe="")
+    content_type = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
+
+    with open(file_path, "rb") as f:
+        raw = f.read()
+
+    upload_url = f"https://firebasestorage.googleapis.com/v0/b/{BUCKET}/o?uploadType=media&name={encoded_path}"
+    result = _request(upload_url, token=token, method="POST", raw_data=raw, content_type=content_type)
+
+    dl_token = result.get("downloadTokens")
+    if not dl_token:
+        meta_url = f"https://firebasestorage.googleapis.com/v0/b/{BUCKET}/o/{encoded_path}"
+        meta = _request(meta_url, token=token)
+        dl_token = meta.get("downloadTokens")
+
+    return f"https://firebasestorage.googleapis.com/v0/b/{BUCKET}/o/{encoded_path}?alt=media&token={dl_token}"
+
+
+def attach_screenshots(token, trade_id, file_paths):
+    urls = [upload_screenshot(token, trade_id, p) for p in file_paths]
+    existing = get_trade(token, trade_id).get("screenshots") or []
+    update_trade_fields(token, trade_id, {"screenshots": existing + urls})
+    return urls
 
 
 def main():
@@ -153,6 +207,18 @@ def main():
         fields = json.loads(sys.argv[3])
         upsert_trade(token, doc_id, fields)
         print(f"Upserted {doc_id}")
+    elif cmd == "update":
+        doc_id = sys.argv[2]
+        fields = json.loads(sys.argv[3])
+        update_trade_fields(token, doc_id, fields)
+        print(f"Updated {list(fields.keys())} on {doc_id}")
+    elif cmd == "attach":
+        doc_id = sys.argv[2]
+        files = sys.argv[3:]
+        urls = attach_screenshots(token, doc_id, files)
+        print(f"Attached {len(urls)} screenshot(s) to {doc_id}:")
+        for u in urls:
+            print(f"  {u}")
     elif cmd == "delete":
         delete_trade(token, sys.argv[2])
         print(f"Deleted {sys.argv[2]}")

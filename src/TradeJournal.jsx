@@ -559,10 +559,10 @@ export default function AlphaJournal(){
                 {t.keyLevel&&<div style={{marginBottom:6,fontSize:10}}><span style={{color:gr}}>Key Level: </span><span style={{color:w}}>{t.keyLevel}</span></div>}
                 {t.levelType?.length>0&&<div style={{marginBottom:6,fontSize:10}}><span style={{color:gr}}>Levels: </span><span style={{color:bl}}>{t.levelType.join(" · ")}</span></div>}
                 {t.confluence?.length>0&&<div style={{marginBottom:6,fontSize:10}}><span style={{color:gr}}>Confluence: </span><span style={{color:cy}}>{t.confluence.join(" · ")}</span></div>}
-                {t.confirmed&&<div style={{marginBottom:5,fontSize:10}}><span style={{color:gr}}>Confirmation: </span>{t.confirmed}</div>}
-                {t.mistakes&&<div style={{marginBottom:5,fontSize:10}}><span style={{color:gr}}>Mistakes: </span><span style={{color:r}}>{t.mistakes}</span></div>}
-                {t.different&&<div style={{marginBottom:5,fontSize:10}}><span style={{color:gr}}>Do Different: </span><span style={{color:y}}>{t.different}</span></div>}
-                {t.notes&&<div style={{marginBottom:5,fontSize:10}}><span style={{color:gr}}>Notes: </span>{t.notes}</div>}
+                {t.confirmed&&<div style={{marginBottom:5,fontSize:10,whiteSpace:"pre-line"}}><span style={{color:gr}}>Confirmation: </span>{t.confirmed}</div>}
+                {t.mistakes&&<div style={{marginBottom:5,fontSize:10,whiteSpace:"pre-line"}}><span style={{color:gr}}>Mistakes: </span><span style={{color:r}}>{t.mistakes}</span></div>}
+                {t.different&&<div style={{marginBottom:5,fontSize:10,whiteSpace:"pre-line"}}><span style={{color:gr}}>Do Different: </span><span style={{color:y}}>{t.different}</span></div>}
+                {t.notes&&<div style={{marginBottom:5,fontSize:10,whiteSpace:"pre-line"}}><span style={{color:gr}}>Notes: </span>{t.notes}</div>}
                 {/* bigger clickable screenshots */}
                 {t.screenshots?.length>0&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(240px, 1fr))",gap:10,marginTop:14}}>{t.screenshots.map((s,i)=><img key={i} src={s} alt="" onClick={()=>setLightbox(s)} style={{width:"100%",height:180,objectFit:"cover",borderRadius:8,border:`1px solid ${b1}`,cursor:"zoom-in",transition:"border-color 0.15s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=bl} onMouseLeave={e=>e.currentTarget.style.borderColor=b1}/>)}</div>}
                 <div style={{display:"flex",gap:8,marginTop:14}}>
@@ -609,9 +609,9 @@ export default function AlphaJournal(){
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10,marginBottom:10}}>{[{l:"R:R",v:t.rr?`${t.rr}:1`:"—",c:g},{l:"Leverage",v:t.leverage||"—"},{l:"Trade %",v:t.tradePercent?`${t.tradePercent}%`:"—"},{l:"TP Hits",v:`${t.hitTp1?"TP1✓ ":""}${t.hitTp2?"TP2✓":""}`||"—"}].map(x=><div key={x.l}><div style={{fontSize:9,color:gr,fontFamily:F}}>{x.l}</div><div style={{fontSize:11,fontWeight:600,color:x.c||w}}>{x.v}</div></div>)}</div>
                 {t.levelType?.length>0&&<div style={{marginBottom:6,fontSize:10}}><span style={{color:gr}}>Levels: </span><span style={{color:bl}}>{t.levelType.join(" · ")}</span></div>}
                 {t.confluence?.length>0&&<div style={{marginBottom:6,fontSize:10}}><span style={{color:gr}}>Confluence: </span><span style={{color:cy}}>{t.confluence.join(" · ")}</span></div>}
-                {t.confirmed&&<div style={{marginBottom:5,fontSize:10}}><span style={{color:gr}}>Confirmation: </span>{t.confirmed}</div>}
-                {t.mistakes&&<div style={{marginBottom:5,fontSize:10}}><span style={{color:gr}}>Mistakes: </span><span style={{color:r}}>{t.mistakes}</span></div>}
-                {t.notes&&<div style={{marginBottom:5,fontSize:10}}><span style={{color:gr}}>Notes: </span>{t.notes}</div>}
+                {t.confirmed&&<div style={{marginBottom:5,fontSize:10,whiteSpace:"pre-line"}}><span style={{color:gr}}>Confirmation: </span>{t.confirmed}</div>}
+                {t.mistakes&&<div style={{marginBottom:5,fontSize:10,whiteSpace:"pre-line"}}><span style={{color:gr}}>Mistakes: </span><span style={{color:r}}>{t.mistakes}</span></div>}
+                {t.notes&&<div style={{marginBottom:5,fontSize:10,whiteSpace:"pre-line"}}><span style={{color:gr}}>Notes: </span>{t.notes}</div>}
                 {t.screenshots?.length>0&&<div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}}>{t.screenshots.map((s,i)=><img key={i} src={s} alt="" onClick={e=>{e.stopPropagation();setLightbox(s);}} style={{width:100,height:70,objectFit:"cover",borderRadius:6,border:`1px solid ${b1}`,cursor:"zoom-in"}}/>)}</div>}
                 <div style={{display:"flex",gap:8,marginTop:12}}>
                   <button onClick={e=>{e.stopPropagation();setCt({...defaultTrade,...t});setEditingId(t.id);setSsFiles([]);setView("log");}} style={{padding:"6px 14px",borderRadius:6,background:`${bl}12`,border:`1px solid ${bl}25`,color:bl,fontSize:10,fontFamily:F,fontWeight:600,cursor:"pointer"}}>Edit</button>
